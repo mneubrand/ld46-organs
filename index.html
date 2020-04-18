@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.22.0/dist/phaser.js"></script>
+    <style>
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    var WIDTH = 1200;
+    var HEIGHT = 750;
+    var TIME_BETWEEN_ORGANS = 5000;
+
+    var config = {
+        type: Phaser.AUTO,
+        width: 1200,
+        height: 750,
+        scene: {
+            preload: preload,
+            create: create
+        }
+    };
+
+    var game = new Phaser.Game(config);
+
+    function preload ()
+    {
+        this.load.image('body', 'assets/body.png');
+        this.load.image('heart', 'assets/heart.png');
+        this.load.image('heart_veins', 'assets/heart_veins.png');
+        this.load.image('trachea', 'assets/trachea.png');
+        this.load.image('left_lung', 'assets/left_lung.png');
+        this.load.image('right_lung', 'assets/right_lung.png');
+        this.load.image('key_space', 'assets/key_space.png');
+        this.load.image('pow', 'assets/pow.png');
+        this.load.image('arrow_up', 'assets/arrow_up.png');
+        this.load.image('arrow_down', 'assets/arrow_down.png');
+        this.load.image('pointer', 'assets/pointer.png');
+    }
+
+    var scene;
+    var heart, heartVeins, keySpace;
+    var lung, trachea, lungArrow, lungPointer;
+
+    function create ()
+    {
+        scene = this;
+
+        this.cameras.main.backgroundColor.setTo(255,255,255);
+        var body = this.add.image(WIDTH/2, HEIGHT/2, 'body');
+
+        // lung
+        trachea = this.add.image(WIDTH/2, 100, 'trachea')
+        trachea.alpha = 0.35;
+        lung = this.add.container(WIDTH/2, 100);
+        lung.add(this.add.image(-115, 120, 'left_lung'));
+        lung.add(this.add.image( 115, 120, 'right_lung'));
+        lung.alpha = 0.35;
+        lung.scale = 0.9;
+        lungArrow = this.add.sprite(WIDTH/2, 100, 'arrow_down');
+        lungArrow.visible = false;
+        lungPointer = this.add.image(WIDTH/2 + 5, 140, 'pointer');
+        this.tweens.add({
+            targets: lungPointer,
+            scale: 1.15,
+            y: 130,
+            duration: 500,
+            repeat: 1000,
+            ease: 'Power2',
+            yoyo: true
+        });
+        lungPointer.visible = false;
+
+        // Heart
+        heart = this.add.container(WIDTH/2 + 50, 270);
+        heart.add(this.add.image(0, 0, 'heart'));
+        heart.in = true;
+        heartVeins = this.add.image(5, 35, 'heart_veins');
+        heartVeins.setAlpha(0.5);
+        heart.add(heartVeins);
+        keySpace = this.add.image(WIDTH/2 + 50, 360, 'key_space');
+        this.tweens.add({
+            targets: keySpace,
+            scale: 1.15,
+            y: 350,
+            duration: 500,
+            repeat: 10000,
+            ease: 'Power2',
+            yoyo: true
+        });
+
+
+        this.input.keyboard.on('keydown', function (event) {
+            if (event.keyCode === Phaser.Input.Keyboard.KeyCodes.SPACE) {
+                event.preventDefault();
+                handleHeart();
+            }
+        });
+
+    }
+
+    function handleHeart() {
+        if(keySpace.visible) {
+            // Start heart timer
+            keySpace.visible = false;
+
+            heart.duration = 4000;
+            heart.timer = scene.time.addEvent({
+                delay: heart.duration,
+                callback: function() {
+                    loose(heart, [heart.list[0]]);
+                }
+            });
+            heartVeins.tween = scene.tweens.add({
+                targets: heartVeins,
+                scale: 1.2,
+                alpha: 1.0,
+                duration: heart.duration - 1000
+            });
+
+            scene.time.addEvent({
+                delay: TIME_BETWEEN_ORGANS,
+                callback: function() {
+                    activateLung();
+                }
+            });
+        }
+
+        // Pump heart
+
+        // Reset loss timer + animation
+        heart.timer.elapsed = 0;
+        heartVeins.tween.restart();
+        if(heartVeins.flash_tween) {
+            heartVeins.flash_tween.stop();
+        }
+        heartVeins.tween.setCallback('onComplete', function() {
+            heartVeins.flash_tween = scene.tweens.add({
+                targets: heart,
+                scale: 1.12,
+                duration: 100,
+                repeat: 10,
+                yoyo: true
+            });
+        }, [], this);
+
+        // Cancel existing animation
+        if(heart.tween) {
+            heart.tween.stop();
+        }
+
+        // Depending on which state we're in pump in or out
+        if(heart.in) {
+            heart.in = false;
+            heart.tween = scene.tweens.add({
+                targets: heart,
+                scale: 1.25,
+                angle: -5,
+                duration: 500,
+                ease: 'Bounce.easeOut'
+            });
+        } else {
+            heart.in = true;
+            heart.tween = scene.tweens.add({
+                targets: heart,
+                scale: 1,
+                angle: 0,
+                duration: 500,
+                ease: 'Bounce.easeOut'
+            });
+        }
+    }
+
+    function activateLung() {
+        lungPointer.visible = true;
+        trachea.alpha = 1.0;
+        lung.alpha = 1.0;
+        lung.duration = 8000;
+
+        lungArrow.visible = true;
+        lungArrow.setInteractive({ pixelPerfect: true, useHandCursor: true });
+        lungArrow.on('pointerdown', handleLung);
+
+        handleLung();
+        lungPointer.hideNext = true;
+    }
+
+    function handleLung() {
+        if(lungPointer.hideNext) {
+            lungPointer.visible = false;
+        }
+
+        var breatheIn = lungArrow.texture.key == 'arrow_down';
+        lungArrow.setTexture(breatheIn ? 'arrow_up' : 'arrow_down');
+
+        var newDuration = lung.duration;
+        if(lung.tween != null) {
+            lung.tween.stop();
+            newDuration = lung.tween.elapsed;
+        }
+        if(lung.flash_tween) {
+            lung.flash_tween.stop();
+            lung.flash_tween = null;
+            newDuration = lung.duration;
+        }
+
+        console.log(newDuration);
+
+        var onComplete = function() {
+            lung.flash_tween = scene.tweens.add({
+                targets: lung,
+                scale: 1,
+                duration: 100,
+                repeat: 10,
+                yoyo: true,
+                onComplete: function() {
+                    loose(lung, [lung.list[0], lung.list[1]]);
+                }
+            });
+        }
+
+        // Depending on which state we're in breathe in or out
+        if(breatheIn) {
+            lung.tween = scene.tweens.add({
+                targets: lung,
+                scale: 1.1,
+                duration: newDuration,
+                onComplete: onComplete
+            });
+        } else {
+            lung.tween = scene.tweens.add({
+                targets: lung,
+                scale: 0.9,
+                duration: newDuration,
+                onComplete: onComplete
+            });
+        }
+    }
+
+    function loose(organ, explode) {
+        organ.visible = false;
+        for(var i = 0; i < explode.length; i++) {
+            var pow = scene.add.image(organ.x + explode[i].x, organ.y + explode[i].y, 'pow');
+            pow.scale = 0.2;
+            scene.tweens.add({
+                targets: pow,
+                scale: 1.3,
+                duration: 500,
+                ease: 'Back.easeOut',
+                onComplete: function (tween, targets) {
+                    targets[0].visible = false;
+                }
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
