@@ -13,7 +13,7 @@
 <script>
     var WIDTH = 1200;
     var HEIGHT = 750;
-    var TIME_BETWEEN_ORGANS = 15000;
+    var TIME_BETWEEN_ORGANS = 1000;
     var START_ALPHA = 0.3;
 
     var config = {
@@ -43,12 +43,15 @@
         this.load.image('liver', 'assets/liver.png');
         this.load.image('checkmark', 'assets/checkmark.png');
         this.load.image('type', 'assets/type.png');
+        this.load.image('kidney_left', 'assets/kidney_left.png');
+        this.load.image('kidney_right', 'assets/kidney_right.png');
     }
 
     var scene;
     var heart, heartVeins, keySpace;
     var lung, trachea, lungArrow, lungPointer;
     var liver;
+    var kidneys, leftKidney, rightKidney;
 
     function create () {
         scene = this;
@@ -58,8 +61,17 @@
 
         // Liver
         liver = this.add.container(WIDTH/2 - 40, 440);
+        liver.angle = 1;
         liver.add(this.add.image(0, 0, 'liver'));
         liver.alpha = START_ALPHA;
+
+        // Kidney
+        kidneys = this.add.container(WIDTH/2, 500);
+        kidneys.alpha = START_ALPHA;
+        leftKidney = this.add.image(-60, 0, 'kidney_left');
+        rightKidney = this.add.image(60, 0, 'kidney_right');
+        kidneys.add(leftKidney);
+        kidneys.add(rightKidney);
 
         // Lung
         trachea = this.add.image(WIDTH/2, 100, 'trachea');
@@ -68,7 +80,7 @@
         lung.add(this.add.image(-115, 120, 'left_lung'));
         lung.add(this.add.image( 115, 120, 'right_lung'));
         lung.alpha = START_ALPHA;
-        lung.scale = 0.9;
+        lung.scale = 0.95;
         lungArrow = this.add.sprite(WIDTH/2, 100, 'arrow_down');
         lungArrow.visible = false;
         lungPointer = this.add.image(WIDTH/2 + 5, 140, 'pointer');
@@ -125,7 +137,7 @@
             // Start heart timer
             keySpace.visible = false;
 
-            heart.duration = 4000;
+            heart.duration = 5000;
             heart.timer = scene.time.addEvent({
                 delay: heart.duration,
                 callback: function() {
@@ -235,7 +247,7 @@
         var onComplete = function() {
             lung.flash_tween = scene.tweens.add({
                 targets: lung,
-                scale: 0.975,
+                scale: 1,
                 duration: 100,
                 repeat: 10,
                 yoyo: true,
@@ -256,7 +268,7 @@
         } else {
             lung.tween = scene.tweens.add({
                 targets: lung,
-                scale: 0.9,
+                scale: 0.95,
                 duration: newDuration,
                 onComplete: onComplete
             });
@@ -286,14 +298,22 @@
         scene.tweens.add({
             targets: liver,
             scaleX: 0.95,
+            angle: -1,
             duration: 1000,
             repeat: 10000,
             yoyo: true
         });
-        liver.add(scene.add.image(-40, -30, 'type'));
+        liver.add(scene.add.image(-40, -20, 'type'));
         liver.index = -1;
 
         handleLiver();
+
+        scene.time.addEvent({
+            delay: TIME_BETWEEN_ORGANS,
+            callback: function() {
+                activateKidneys();
+            }
+        });
     }
 
     var liverWords = ['detoxify', 'metabolize', 'synthesize', 'glycogen', 'hormones', 'bile'];
@@ -311,13 +331,16 @@
             liver.textB.destroy();
         }
 
-        liver.textA = scene.add.text(-112, -25, liver.word, { fontFamily: 'Arial', fontSize: 28, color: '#333333' });
+        liver.textA = scene.add.text(-112, -15, liver.word, { fontFamily: 'Arial', fontSize: 28, color: '#333333' });
         liver.textA.setOrigin(0, 0.5);
-        liver.textB = scene.add.text(-112, -25, '', { fontFamily: 'Arial', fontSize: 28, color: '#008800' });
+        liver.textB = scene.add.text(-112, -15, '', { fontFamily: 'Arial', fontSize: 28, color: '#008800' });
         liver.textB.setOrigin(0, 0.5);
         liver.add(liver.textA);
         liver.add(liver.textB);
 
+        if(liver.timer) {
+            liver.timer.remove();
+        }
         liver.timer = scene.time.addEvent({
             delay: liver.duration,
             callback: function() {
@@ -351,6 +374,50 @@
                 handleLiver();
             }
         }
+    }
+
+    function activateKidneys() {
+        kidneys.alpha = 1.0;
+
+        var onComplete = function(tween, targets) {
+            targets[0].flash_tween = scene.tweens.add({
+                targets: targets[0],
+                scale: 0.7,
+                duration: 100,
+                repeat: 10,
+                yoyo: true,
+                onComplete: function() {
+                    loose(kidneys, [leftKidney, rightKidney]);
+                }
+            });
+        };
+
+        leftKidney.duration = 10000;
+        leftKidney.tween = scene.tweens.add({
+            targets: leftKidney,
+            scale: 0.6,
+            duration: leftKidney.duration,
+            onComplete: onComplete
+        });
+        rightKidney.tween = scene.tweens.add({
+            targets: rightKidney,
+            scale: 0.6,
+            duration: leftKidney.duration,
+            onComplete: onComplete
+        });
+
+        var handleKidney = function() {
+            if(this.flash_tween) {
+                this.flash_tween.stop();
+                this.flash_tween = null;
+            }
+            this.tween.seek(Math.max(this.tween.progress - 0.1, 0));
+        };
+
+        leftKidney.setInteractive({ pixelPerfect: true, useHandCursor: true });
+        rightKidney.setInteractive({ pixelPerfect: true, useHandCursor: true });
+        leftKidney.on('pointerdown', handleKidney.bind(leftKidney));
+        rightKidney.on('pointerdown', handleKidney.bind(rightKidney));
     }
 
 </script>
