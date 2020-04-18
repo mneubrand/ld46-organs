@@ -13,7 +13,8 @@
 <script>
     var WIDTH = 1200;
     var HEIGHT = 750;
-    var TIME_BETWEEN_ORGANS = 5000;
+    var TIME_BETWEEN_ORGANS = 15000;
+    var START_ALPHA = 0.3;
 
     var config = {
         type: Phaser.AUTO,
@@ -27,8 +28,7 @@
 
     var game = new Phaser.Game(config);
 
-    function preload ()
-    {
+    function preload () {
         this.load.image('body', 'assets/body.png');
         this.load.image('heart', 'assets/heart.png');
         this.load.image('heart_veins', 'assets/heart_veins.png');
@@ -40,26 +40,34 @@
         this.load.image('arrow_up', 'assets/arrow_up.png');
         this.load.image('arrow_down', 'assets/arrow_down.png');
         this.load.image('pointer', 'assets/pointer.png');
+        this.load.image('liver', 'assets/liver.png');
+        this.load.image('checkmark', 'assets/checkmark.png');
+        this.load.image('type', 'assets/type.png');
     }
 
     var scene;
     var heart, heartVeins, keySpace;
     var lung, trachea, lungArrow, lungPointer;
+    var liver;
 
-    function create ()
-    {
+    function create () {
         scene = this;
 
         this.cameras.main.backgroundColor.setTo(255,255,255);
         var body = this.add.image(WIDTH/2, HEIGHT/2, 'body');
 
-        // lung
-        trachea = this.add.image(WIDTH/2, 100, 'trachea')
-        trachea.alpha = 0.35;
+        // Liver
+        liver = this.add.container(WIDTH/2 - 40, 440);
+        liver.add(this.add.image(0, 0, 'liver'));
+        liver.alpha = START_ALPHA;
+
+        // Lung
+        trachea = this.add.image(WIDTH/2, 100, 'trachea');
+        trachea.alpha = START_ALPHA;
         lung = this.add.container(WIDTH/2, 100);
         lung.add(this.add.image(-115, 120, 'left_lung'));
         lung.add(this.add.image( 115, 120, 'right_lung'));
-        lung.alpha = 0.35;
+        lung.alpha = START_ALPHA;
         lung.scale = 0.9;
         lungArrow = this.add.sprite(WIDTH/2, 100, 'arrow_down');
         lungArrow.visible = false;
@@ -80,7 +88,8 @@
         heart.add(this.add.image(0, 0, 'heart'));
         heart.in = true;
         heartVeins = this.add.image(5, 35, 'heart_veins');
-        heartVeins.setAlpha(0.5);
+        heartVeins.scale = 1.1;
+        heartVeins.alpha = 0.3;
         heart.add(heartVeins);
         keySpace = this.add.image(WIDTH/2 + 50, 360, 'key_space');
         this.tweens.add({
@@ -98,6 +107,14 @@
             if (event.keyCode === Phaser.Input.Keyboard.KeyCodes.SPACE) {
                 event.preventDefault();
                 handleHeart();
+            } else {
+                if(liver.alpha == 1.0) {
+                    var letter = String.fromCharCode(event.keyCode);
+                    if(letter >= 'A' && letter <= 'Z') {
+                        handleLiverInput(letter);
+                    }
+                }
+
             }
         });
 
@@ -179,7 +196,7 @@
         lungPointer.visible = true;
         trachea.alpha = 1.0;
         lung.alpha = 1.0;
-        lung.duration = 8000;
+        lung.duration = 10000;
 
         lungArrow.visible = true;
         lungArrow.setInteractive({ pixelPerfect: true, useHandCursor: true });
@@ -187,6 +204,13 @@
 
         handleLung();
         lungPointer.hideNext = true;
+
+        scene.time.addEvent({
+            delay: TIME_BETWEEN_ORGANS,
+            callback: function() {
+                activateLiver();
+            }
+        });
     }
 
     function handleLung() {
@@ -208,12 +232,10 @@
             newDuration = lung.duration;
         }
 
-        console.log(newDuration);
-
         var onComplete = function() {
             lung.flash_tween = scene.tweens.add({
                 targets: lung,
-                scale: 1,
+                scale: 0.975,
                 duration: 100,
                 repeat: 10,
                 yoyo: true,
@@ -227,7 +249,7 @@
         if(breatheIn) {
             lung.tween = scene.tweens.add({
                 targets: lung,
-                scale: 1.1,
+                scale: 1.05,
                 duration: newDuration,
                 onComplete: onComplete
             });
@@ -257,6 +279,80 @@
             });
         }
     }
+
+    function activateLiver() {
+        liver.alpha = 1.0;
+        liver.duration = 15000;
+        scene.tweens.add({
+            targets: liver,
+            scaleX: 0.95,
+            duration: 1000,
+            repeat: 10000,
+            yoyo: true
+        });
+        liver.add(scene.add.image(-40, -30, 'type'));
+        liver.index = -1;
+
+        handleLiver();
+    }
+
+    var liverWords = ['detoxify', 'metabolize', 'synthesize', 'glycogen', 'hormones', 'bile'];
+
+    function handleLiver() {
+        var newIndex = 0;
+        do {
+            newIndex = Math.floor(Math.random() * liverWords.length);
+        } while(newIndex == liver.index);
+        liver.index = newIndex;
+        liver.word = liverWords[newIndex];
+        liver.wordPosition = 0;
+        if(liver.textA) {
+            liver.textA.destroy();
+            liver.textB.destroy();
+        }
+
+        liver.textA = scene.add.text(-112, -25, liver.word, { fontFamily: 'Arial', fontSize: 28, color: '#333333' });
+        liver.textA.setOrigin(0, 0.5);
+        liver.textB = scene.add.text(-112, -25, '', { fontFamily: 'Arial', fontSize: 28, color: '#008800' });
+        liver.textB.setOrigin(0, 0.5);
+        liver.add(liver.textA);
+        liver.add(liver.textB);
+
+        liver.timer = scene.time.addEvent({
+            delay: liver.duration,
+            callback: function() {
+                liver.flash_tween = scene.tweens.add({
+                    targets: liver,
+                    scale: 1.1,
+                    duration: 100,
+                    repeat: 10,
+                    yoyo: true,
+                    onComplete: function() {
+                        loose(liver, [liver.list[0]]);
+                    }
+                });
+            }
+        });
+
+        if(liver.flash_tween) {
+            liver.flash_tween.stop();
+            liver.flash_tween = null;
+        }
+    }
+
+    function handleLiverInput(letter) {
+        if(letter.toLowerCase() == liver.word.charAt(liver.wordPosition)) {
+            liver.wordPosition++;
+            liver.textA.text = liver.word.substring(liver.wordPosition, liver.word.length);
+            liver.textB.text = liver.word.substring(0, liver.wordPosition);
+            liver.textA.x = -112 + liver.textB.width;
+
+            if(liver.wordPosition == liver.word.length) {
+                handleLiver();
+            }
+        }
+    }
+
 </script>
 
 </body>
