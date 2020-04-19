@@ -16,13 +16,9 @@
 <body>
 
 <script>
-    // TODO
-    // Audio
-    // Balance time
-
     var WIDTH = 1200;
     var HEIGHT = 750;
-    var TIME_BETWEEN_ORGANS = 1000;
+    var TIME_BETWEEN_ORGANS = 1000; // now set by bg music length
     var START_ALPHA = 0.3;
 
     var config = {
@@ -64,6 +60,42 @@
         this.load.audio('loop', [
             'assets/loop.ogg',
             'assets/loop.mp3'
+        ]);
+        this.load.audio('cough', [
+            'assets/cough.ogg',
+            'assets/cough.mp3'
+        ]);
+        this.load.audio('breathe_in', [
+            'assets/breathe_in.ogg',
+            'assets/breathe_in.mp3'
+        ]);
+        this.load.audio('breathe_out', [
+            'assets/breathe_out.ogg',
+            'assets/breathe_out.mp3'
+        ]);
+        this.load.audio('fart1', [
+            'assets/fart1.ogg',
+            'assets/fart1.mp3'
+        ]);
+        this.load.audio('fart2', [
+            'assets/fart2.ogg',
+            'assets/fart2.mp3'
+        ]);
+        this.load.audio('splash', [
+            'assets/splash.ogg',
+            'assets/splash.mp3'
+        ]);
+        this.load.audio('heart', [
+            'assets/heart.ogg',
+            'assets/heart.mp3'
+        ]);
+        this.load.audio('keystroke', [
+            'assets/keystroke.ogg',
+            'assets/keystroke.mp3'
+        ]);
+        this.load.audio('pow', [
+            'assets/pow.ogg',
+            'assets/pow.mp3'
         ]);
     }
 
@@ -221,7 +253,19 @@
         gameOver.visible = false;
 
         loop = this.sound.add('loop');
+        soundCough = this.sound.add('cough');
+        soundBreatheIn = this.sound.add('breathe_in');
+        soundBreatheOut = this.sound.add('breathe_out');
+        soundFart1 = this.sound.add('fart1');
+        soundFart2 = this.sound.add('fart2');
+        soundSplash = this.sound.add('splash');
+        soundHeart = this.sound.add('heart');
+        soundKeystroke = this.sound.add('keystroke');
+        soundPow = this.sound.add('pow');
     }
+
+    var soundCough, soundBreatheIn, soundBreatheOut, soundFart1, soundFart2, soundSplash;
+    var soundHeart, soundKeystroke, soundPow;
 
     function handleHeart() {
         if(keySpace.visible) {
@@ -230,6 +274,7 @@
                 volume: 0.4
             });
             TIME_BETWEEN_ORGANS = Math.floor(loop.totalDuration * 1000);
+            //TIME_BETWEEN_ORGANS = 1000;
 
             // Start heart timer
             keySpace.visible = false;
@@ -266,6 +311,7 @@
         }
 
         // Pump heart
+        soundHeart.play();
 
         // Reset loss timer + animation
         heart.timer.elapsed = 0;
@@ -274,6 +320,7 @@
             heartVeins.flash_tween.stop();
         }
         heartVeins.tween.setCallback('onComplete', function() {
+            soundCough.play();
             heartVeins.flash_tween = scene.tweens.add({
                 targets: heart,
                 scale: 1.12,
@@ -314,7 +361,7 @@
         lungPointer.visible = true;
         trachea.alpha = 1.0;
         lung.alpha = 1.0;
-        lung.duration = 10000;
+        lung.duration = 12000;
 
         lungArrow.visible = true;
         lungArrow.setInteractive({ pixelPerfect: true, useHandCursor: true });
@@ -337,6 +384,11 @@
         }
 
         var breatheIn = lungArrow.texture.key == 'arrow_down';
+        if(breatheIn) {
+            soundBreatheIn.play();
+        } else {
+            soundBreatheOut.play();
+        }
         lungArrow.setTexture(breatheIn ? 'arrow_up' : 'arrow_down');
 
         var newDuration = lung.duration;
@@ -351,6 +403,7 @@
         }
 
         var onComplete = function() {
+            soundCough.play();
             lung.flash_tween = scene.tweens.add({
                 targets: lung,
                 scale: 1,
@@ -436,6 +489,7 @@
         liver.timer = scene.time.addEvent({
             delay: liver.duration,
             callback: function() {
+                soundCough.play();
                 liver.flash_tween = scene.tweens.add({
                     targets: liver,
                     scale: 1.1,
@@ -457,6 +511,7 @@
 
     function handleLiverInput(letter) {
         if(letter.toLowerCase() == liver.word.charAt(liver.wordPosition)) {
+            soundKeystroke.play();
             liver.wordPosition++;
             liver.textA.text = liver.word.substring(liver.wordPosition, liver.word.length);
             liver.textB.text = liver.word.substring(0, liver.wordPosition);
@@ -474,6 +529,7 @@
         rightKidney.pointer.visible = true;
 
         var onComplete = function(tween, targets) {
+            soundCough.play();
             targets[0].flash_tween = scene.tweens.add({
                 targets: targets[0],
                 scale: 0.7,
@@ -488,7 +544,7 @@
             });
         };
 
-        leftKidney.duration = 10000;
+        leftKidney.duration = 15000;
         leftKidney.tween = scene.tweens.add({
             targets: leftKidney,
             scale: 0.6,
@@ -525,6 +581,7 @@
             var progress = Math.max(this.tween.progress - 0.1, 0);
             console.log(progress);
             this.tween.seek(progress);
+            soundSplash.play();
         };
 
         leftKidney.setInteractive({ pixelPerfect: true, useHandCursor: true });
@@ -541,7 +598,7 @@
     }
 
     function activateIntestines() {
-        intestines.duration = 5000;
+        intestines.duration = 8000;
         intestineContainer.alpha = 1.0;
         for(var i = 0; i < intestines.length; i++) {
             intestines[i].setInteractive({ pixelPerfect: true, useHandCursor: true });
@@ -566,6 +623,12 @@
     }
 
     function handleIntestines() {
+        if(Math.random() > 0.5) {
+            soundFart1.play();
+        } else {
+            soundFart2.play();
+        }
+
         if(intestines.hideNext) {
             intestinePointer.visible = false;
         }
@@ -594,6 +657,7 @@
         }
 
         var onComplete = function(tween, targets) {
+            soundCough.play();
             targets[0].flash_tween = scene.tweens.add({
                 targets: targets[0],
                 scale: 1.4,
@@ -625,6 +689,7 @@
     }
 
     function loose(organ, explode) {
+        soundPow.play();
         organ.visible = false;
         for(var i = 0; i < explode.length; i++) {
             var pow = scene.add.image(organ.x + explode[i].x, organ.y + explode[i].y, 'pow');
