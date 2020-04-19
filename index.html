@@ -1,16 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="//cdn.jsdelivr.net/npm/phaser@3.22.0/dist/phaser.js"></script>
+    <script src="phaser.3.22.js"></script>
     <style>
         body {
             margin: 0;
+        }
+
+        canvas {
+            margin: 0 auto;
+            display: block;
         }
     </style>
 </head>
 <body>
 
 <script>
+    // TODO
+    // Audio
+    // Small intestine
+    // Balance time
+
     var WIDTH = 1200;
     var HEIGHT = 750;
     var TIME_BETWEEN_ORGANS = 15000;
@@ -46,6 +56,10 @@
         this.load.image('kidney_left', 'assets/kidney_left.png');
         this.load.image('kidney_right', 'assets/kidney_right.png');
         this.load.image('game_over', 'assets/game_over.png');
+        this.load.image('intestine', 'assets/intestine.png');
+        this.load.image('intestine', 'assets/intestine.png');
+        this.load.image('drop1', 'assets/drop1.png');
+        this.load.image('drop2', 'assets/drop2.png');
     }
 
     var scene;
@@ -53,6 +67,7 @@
     var lung, trachea, lungArrow, lungPointer;
     var liver;
     var kidneys, leftKidney, rightKidney;
+    var intestines, intestineContainer, intestinePointer;
     var gameOver;
     var score, scoreTimer;
 
@@ -67,6 +82,36 @@
         liver.angle = 1;
         liver.add(this.add.image(0, 0, 'liver'));
         liver.alpha = START_ALPHA;
+
+        // Intestine
+        intestineContainer = this.add.container(0, 0);
+        intestines = [];
+        var offsetX = 33;
+        var offsetY = 37;
+        var coords = [
+            [WIDTH/2 - 140, 680, 0],
+            [WIDTH/2 - 140, 680 - offsetY, 0],
+            [WIDTH/2 - 140, 680 - 2 * offsetY, 0],
+            [WIDTH/2 - 135, 690 - 3 * offsetY, 45],
+            [WIDTH/2 - 140 + offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 2 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 3 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 4 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 5 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 6 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 7 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 145 + 8 * offsetX, 690 - 3 * offsetY, 135],
+            [WIDTH/2 - 140 + 8 * offsetX, 680 - 2 * offsetY, 0],
+            [WIDTH/2 - 140 + 8 * offsetX, 680 - offsetY, 0],
+            [WIDTH/2 - 140 + 8 * offsetX, 680, 0]
+        ];
+        for(var i = 0; i < coords.length; i++) {
+            var int = this.add.image(coords[i][0], coords[i][1], 'intestine');
+            int.angle = coords[i][2];
+            int.alpha = START_ALPHA;
+            intestines.push(int);
+            intestineContainer.add(int);
+        }
 
         // Kidney
         kidneys = this.add.container(WIDTH/2, 500);
@@ -101,16 +146,15 @@
         kidneys.add(rightKidney.pointer);
 
         // Lung
-        trachea = this.add.image(WIDTH/2, 100, 'trachea');
-        trachea.alpha = START_ALPHA;
+        trachea = this.add.image(0, 0, 'trachea');
         lung = this.add.container(WIDTH/2, 100);
         lung.add(this.add.image(-115, 120, 'left_lung'));
         lung.add(this.add.image( 115, 120, 'right_lung'));
         lung.alpha = START_ALPHA;
         lung.scale = 0.85;
-        lungArrow = this.add.sprite(WIDTH/2, 100, 'arrow_down');
+        lungArrow = this.add.sprite(0, 0, 'arrow_down');
         lungArrow.visible = false;
-        lungPointer = this.add.image(WIDTH/2 + 5, 140, 'pointer');
+        lungPointer = this.add.image(5, 40, 'pointer');
         this.tweens.add({
             targets: lungPointer,
             scale: 1.1,
@@ -120,6 +164,9 @@
             ease: 'Power2',
             yoyo: true
         });
+        lung.add(lungPointer);
+        lung.add(trachea);
+        lung.add(lungArrow);
         lungPointer.visible = false;
 
         // Heart
@@ -455,13 +502,105 @@
                 this.flash_tween.stop();
                 this.flash_tween = null;
             }
-            this.tween.seek(Math.max(this.tween.progress - 0.1, 0));
+            var progress = Math.max(this.tween.progress - 0.1, 0);
+            console.log(progress);
+            this.tween.seek(progress);
         };
 
         leftKidney.setInteractive({ pixelPerfect: true, useHandCursor: true });
         rightKidney.setInteractive({ pixelPerfect: true, useHandCursor: true });
         leftKidney.on('pointerdown', handleKidney.bind(leftKidney));
         rightKidney.on('pointerdown', handleKidney.bind(rightKidney));
+
+        scene.time.addEvent({
+            delay: TIME_BETWEEN_ORGANS,
+            callback: function() {
+                activateIntestines();
+            }
+        });
+    }
+
+    function activateIntestines() {
+        intestines.duration = 5000;
+        for(var i = 0; i < intestines.length; i++) {
+            intestines[i].alpha = 1.0;
+            intestines[i].setInteractive({ pixelPerfect: true, useHandCursor: true });
+            intestines[i].input.enabled = false;
+            intestines[i].on('pointerdown', handleIntestines);
+        }
+
+        intestinePointer = scene.add.image(WIDTH/2 - 140, 730, 'pointer');
+        scene.tweens.add({
+            targets: intestinePointer,
+            scale: 1.1,
+            y: 720,
+            duration: 500,
+            repeat: 10000,
+            ease: 'Power2',
+            yoyo: true
+        });
+
+        intestines.currentIndex = -1;
+        handleIntestines();
+        intestines.hideNext = true;
+    }
+
+    function handleIntestines() {
+        if(intestines.hideNext) {
+            intestinePointer.visible = false;
+        }
+
+        if(intestines.currentIndex >= 0) {
+            var old = intestines[intestines.currentIndex];
+            if(old.tween) {
+                old.tween.stop();
+                old.tween = null;
+            }
+            if(old.flash_tween) {
+                old.flash_tween.stop();
+                old.flash_tween = null;
+            }
+            if(old.shake_tween) {
+                old.shake_tween.stop();
+                old.shake_tween = null;
+            }
+            old.input.enabled = false;
+            old.scale = 1.0;
+        }
+
+        intestines.currentIndex++;
+        if(intestines.currentIndex == intestines.length) {
+            intestines.currentIndex = 0;
+        }
+
+        var onComplete = function(tween, targets) {
+            targets[0].flash_tween = scene.tweens.add({
+                targets: targets[0],
+                scale: 1.4,
+                duration: 100,
+                repeat: 10,
+                yoyo: true,
+                onComplete: function() {
+                    loose(intestineContainer, [intestineContainer.list[intestines.currentIndex]]);
+                }
+            });
+        };
+
+        var next = intestines[intestines.currentIndex];
+        next.tween = scene.tweens.add({
+            targets: next,
+            scale: 1.5,
+            duration: intestines.duration,
+            onComplete: onComplete
+        });
+        next.shake_tween = scene.tweens.add({
+            targets: next,
+            x: next.x - 3,
+            duration: 200,
+            yoyo: true,
+            repeat: 10000
+        });
+        next.input.enabled = true;
     }
 
     function loose(organ, explode) {
@@ -478,11 +617,29 @@
                     targets[0].visible = false;
                 }
             });
+
+            pow.emitter = scene.add.particles('drop2').createEmitter({
+                speed: { min: -300, max: 300 },
+                angle: { min: 0, max: 360 },
+                scale: { start: 1.5, end: 0.2 },
+                //active: false,
+                lifespan: 500,
+                gravityY: 800
+            });
+            pow.emitter.setEmitZone({
+                source: new Phaser.Geom.Circle(pow.x, pow.y, 20),
+                type: 'random'
+            });
         }
 
-        lungArrow.input.enabled = false;
-        leftKidney.input.enabled = false;
-        rightKidney.input.enabled = false;
+        if(lungArrow.input)
+            lungArrow.input.enabled = false;
+        if(leftKidney.input)
+            leftKidney.input.enabled = false;
+        if(rightKidney.input)
+            rightKidney.input.enabled = false;
+        if(intestines[intestines.currentIndex] && intestines[intestines.currentIndex].input)
+            intestines[intestines.currentIndex].input.enabled = false;
         scene.input.keyboard.enabled = false;
 
         gameOver.visible = true;
