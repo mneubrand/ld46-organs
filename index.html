@@ -18,12 +18,11 @@
 <script>
     // TODO
     // Audio
-    // Small intestine
     // Balance time
 
     var WIDTH = 1200;
     var HEIGHT = 750;
-    var TIME_BETWEEN_ORGANS = 15000;
+    var TIME_BETWEEN_ORGANS = 1000;
     var START_ALPHA = 0.3;
 
     var config = {
@@ -57,9 +56,15 @@
         this.load.image('kidney_right', 'assets/kidney_right.png');
         this.load.image('game_over', 'assets/game_over.png');
         this.load.image('intestine', 'assets/intestine.png');
-        this.load.image('intestine', 'assets/intestine.png');
+        this.load.image('intestine2', 'assets/intestine2.png');
         this.load.image('drop1', 'assets/drop1.png');
         this.load.image('drop2', 'assets/drop2.png');
+        this.load.image('small_intestine', 'assets/small_intestine.png');
+
+        this.load.audio('loop', [
+            'assets/loop.ogg',
+            'assets/loop.mp3'
+        ]);
     }
 
     var scene;
@@ -70,6 +75,7 @@
     var intestines, intestineContainer, intestinePointer;
     var gameOver;
     var score, scoreTimer;
+    var loop;
 
     function create () {
         scene = this;
@@ -85,30 +91,36 @@
 
         // Intestine
         intestineContainer = this.add.container(0, 0);
+        intestineContainer.alpha = START_ALPHA;
+        intestineContainer.add(this.add.image(WIDTH/2, 660, 'small_intestine'));
+        intestineContainer.add(this.add.image(WIDTH/2 - 140, 740, 'intestine2'));
+        intestineContainer.add(this.add.image(WIDTH/2 + 60, 740, 'intestine2'));
         intestines = [];
         var offsetX = 33;
         var offsetY = 37;
         var coords = [
+            [WIDTH/2 - 140, 680 + offsetY, 0],
             [WIDTH/2 - 140, 680, 0],
             [WIDTH/2 - 140, 680 - offsetY, 0],
             [WIDTH/2 - 140, 680 - 2 * offsetY, 0],
             [WIDTH/2 - 135, 690 - 3 * offsetY, 45],
-            [WIDTH/2 - 140 + offsetX, 680 - 3 * offsetY, 90],
-            [WIDTH/2 - 140 + 2 * offsetX, 680 - 3 * offsetY, 90],
-            [WIDTH/2 - 140 + 3 * offsetX, 680 - 3 * offsetY, 90],
-            [WIDTH/2 - 140 + 4 * offsetX, 680 - 3 * offsetY, 90],
-            [WIDTH/2 - 140 + 5 * offsetX, 680 - 3 * offsetY, 90],
-            [WIDTH/2 - 140 + 6 * offsetX, 680 - 3 * offsetY, 90],
-            [WIDTH/2 - 140 + 7 * offsetX, 680 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + offsetX, 700 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 2 * offsetX, 700 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 3 * offsetX, 700 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 4 * offsetX, 700 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 5 * offsetX, 700 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 6 * offsetX, 700 - 3 * offsetY, 90],
+            [WIDTH/2 - 140 + 7 * offsetX, 700 - 3 * offsetY, 90],
             [WIDTH/2 - 145 + 8 * offsetX, 690 - 3 * offsetY, 135],
-            [WIDTH/2 - 140 + 8 * offsetX, 680 - 2 * offsetY, 0],
-            [WIDTH/2 - 140 + 8 * offsetX, 680 - offsetY, 0],
-            [WIDTH/2 - 140 + 8 * offsetX, 680, 0]
+            [WIDTH/2 - 140 + 8 * offsetX, 680 - 2 * offsetY, 180],
+            [WIDTH/2 - 140 + 8 * offsetX, 680 - offsetY, 180],
+            [WIDTH/2 - 140 + 8 * offsetX, 680, 180],
+            [WIDTH/2 - 170 + 8 * offsetX, 700, 180],
+            [WIDTH/2 - 200 + 8 * offsetX, 720, 180]
         ];
         for(var i = 0; i < coords.length; i++) {
             var int = this.add.image(coords[i][0], coords[i][1], 'intestine');
             int.angle = coords[i][2];
-            int.alpha = START_ALPHA;
             intestines.push(int);
             intestineContainer.add(int);
         }
@@ -207,10 +219,18 @@
         gameOver = this.add.image(WIDTH/2, HEIGHT/2, 'game_over');
         gameOver.setDepth(1);
         gameOver.visible = false;
+
+        loop = this.sound.add('loop');
     }
 
     function handleHeart() {
         if(keySpace.visible) {
+            loop.play({
+                loop: true,
+                volume: 0.4
+            });
+            TIME_BETWEEN_ORGANS = Math.floor(loop.totalDuration * 1000);
+
             // Start heart timer
             keySpace.visible = false;
 
@@ -338,7 +358,7 @@
                 repeat: 10,
                 yoyo: true,
                 onComplete: function() {
-                    loose(lung, [lung.list[0], lung.list[1]]);
+                    loose(lung, [lung.list[2], lung.list[1]]);
                 }
             });
         }
@@ -387,7 +407,7 @@
 
     var liverWords = [
         'detoxify', 'metabolize', 'synthesize', 'glycogen', 'hormones', 'bile',
-        ''
+        'alkaline', 'digestion', 'hepatic'
     ];
 
     function handleLiver() {
@@ -522,18 +542,18 @@
 
     function activateIntestines() {
         intestines.duration = 5000;
+        intestineContainer.alpha = 1.0;
         for(var i = 0; i < intestines.length; i++) {
-            intestines[i].alpha = 1.0;
             intestines[i].setInteractive({ pixelPerfect: true, useHandCursor: true });
             intestines[i].input.enabled = false;
             intestines[i].on('pointerdown', handleIntestines);
         }
 
-        intestinePointer = scene.add.image(WIDTH/2 - 140, 730, 'pointer');
+        intestinePointer = scene.add.image(WIDTH/2 - 140, 760, 'pointer');
         scene.tweens.add({
             targets: intestinePointer,
             scale: 1.1,
-            y: 720,
+            y: 750,
             duration: 500,
             repeat: 10000,
             ease: 'Power2',
@@ -587,6 +607,7 @@
         };
 
         var next = intestines[intestines.currentIndex];
+        intestineContainer.moveTo(next, intestineContainer.list.length - 1);
         next.tween = scene.tweens.add({
             targets: next,
             scale: 1.5,
