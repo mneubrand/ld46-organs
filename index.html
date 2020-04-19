@@ -148,6 +148,7 @@
         // Lung
         trachea = this.add.image(0, 0, 'trachea');
         lung = this.add.container(WIDTH/2, 100);
+        lung.add(trachea);
         lung.add(this.add.image(-115, 120, 'left_lung'));
         lung.add(this.add.image( 115, 120, 'right_lung'));
         lung.alpha = START_ALPHA;
@@ -158,15 +159,14 @@
         this.tweens.add({
             targets: lungPointer,
             scale: 1.1,
-            y: 130,
+            y: 30,
             duration: 500,
             repeat: 1000,
             ease: 'Power2',
             yoyo: true
         });
-        lung.add(lungPointer);
-        lung.add(trachea);
         lung.add(lungArrow);
+        lung.add(lungPointer);
         lungPointer.visible = false;
 
         // Heart
