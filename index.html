@@ -271,7 +271,7 @@
         if(keySpace.visible) {
             loop.play({
                 loop: true,
-                volume: 0.4
+                volume: 0.5
             });
             TIME_BETWEEN_ORGANS = Math.floor(loop.totalDuration * 1000);
             //TIME_BETWEEN_ORGANS = 1000;
@@ -620,7 +620,28 @@
         intestines.currentIndex = -1;
         handleIntestines();
         intestines.hideNext = true;
+
+        currentRate = 1.0;
+        accelerateFunction = function() {
+            lung.duration *= 0.9;
+            heart.duration *= 0.9;
+            liver.duration *= 0.9;
+            intestines.duration *= 0.9;
+            currentRate += 0.1;
+            loop.rate = currentRate;
+            console.log(loop.totalDuration);
+            scene.time.addEvent({
+                delay: TIME_BETWEEN_ORGANS / currentRate,
+                callback: accelerateFunction
+            });
+        };
+        scene.time.addEvent({
+            delay: TIME_BETWEEN_ORGANS,
+            callback: accelerateFunction
+        });
     }
+
+    var currentRate, accelerateFunction;
 
     function handleIntestines() {
         if(Math.random() > 0.5) {
